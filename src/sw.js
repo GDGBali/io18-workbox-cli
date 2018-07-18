@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.0.0/workbox-sw.js');
+importScripts(
+  "https://storage.googleapis.com/workbox-cdn/releases/3.0.0/workbox-sw.js"
+);
 
 if (workbox) {
   console.log(`Yay! Workbox is loaded 🎉`);
@@ -22,30 +24,49 @@ if (workbox) {
   workbox.precaching.precacheAndRoute([]);
 
   workbox.routing.registerRoute(
-		/(.*)articles(.*)\.(?:png|gif|jpg)/,
-		workbox.strategies.cacheFirst({
-			cacheName: 'images-cache',
-			plugins: [
-				new workbox.expiration.Plugin({
-					maxEntries: 50,
-					maxAgeSeconds: 30 * 24 * 60 * 60
-				})
-			]
-		})
-	);
-	
-	workbox.routing.registerRoute(
-		new RegExp('/images/icon/'),
-  	workbox.strategies.staleWhileRevalidate({
-			cacheName: 'icon-cache',
-			plugins: [
-				new workbox.expiration.Plugin({
-					maxEntries: 5,
-				})
-			]
-		})
-	)
+    /(.*)articles(.*)\.(?:png|gif|jpg)/,
+    workbox.strategies.cacheFirst({
+      cacheName: "images-cache",
+      plugins: [
+        new workbox.expiration.Plugin({
+          maxEntries: 50,
+          maxAgeSeconds: 30 * 24 * 60 * 60
+        })
+      ]
+    })
+  );
 
+  workbox.routing.registerRoute(
+    new RegExp("/images/icon/"),
+    workbox.strategies.staleWhileRevalidate({
+      cacheName: "icon-cache",
+      plugins: [
+        new workbox.expiration.Plugin({
+          maxEntries: 5
+        })
+      ]
+    })
+  );
+
+  const articleHandler = workbox.strategies.networkFirst({
+    cacheName: "articles-cache",
+    plugins: [
+      new workbox.expiration.Plugin({
+        maxEntries: 50
+      })
+    ]
+  });
+
+  workbox.routing.registerRoute(/(.*)article(.*)\.html/, args => {
+    return articleHandler.handle(args).then(response => {
+      if (!response) {
+        return caches.match("pages/offline.html");
+      } else if (response.status === 404) {
+        return caches.match("pages/404.html");
+      }
+      return response;
+    });
+  });
 } else {
   console.log(`Boo! Workbox didn't load 😬`);
 }
