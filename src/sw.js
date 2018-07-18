@@ -67,6 +67,29 @@ if (workbox) {
       return response;
     });
   });
+
+  const postHandler = workbox.strategies.cacheFirst({
+    cacheName: "posts-cache",
+    plugins: [
+      new workbox.expiration.Plugin({
+        maxEntries: 50
+      })
+    ]
+  });
+
+  workbox.routing.registerRoute(/(.*)pages\/post(.*)\.html/, args => {
+    return postHandler
+      .handle(args)
+      .then(response => {
+        if (response.status === 404) {
+          return caches.match("pages/404.html");
+        }
+        return response;
+      })
+      .catch(function() {
+        return caches.match("pages/offline.html");
+      });
+  });
 } else {
   console.log(`Boo! Workbox didn't load 😬`);
 }
